@@ -9,7 +9,7 @@
 
 
 typedef struct{
-    int w,a,d,s;    //button state on|off
+    int w,a,d,s,e;    //button state on|off
 }ButtonKeys; ButtonKeys Keys;
 
 //Textutres
@@ -186,23 +186,23 @@ void drawPlayer(){
 #define mapX 8      //map width
 #define mapY 8      //map height
 #define mapS 64    //cube size
-int map[]=
+int mapW[]=
 {
     1,1,1,1,1,1,1,1,
-    1,0,1,0,0,0,1,1,
-    1,0,1,0,0,0,0,1,
+    1,0,0,0,1,0,0,1,
+    1,0,0,0,1,0,0,1,
+    1,1,4,1,1,0,0,1,
     1,0,0,0,0,0,0,1,
     1,0,0,0,0,0,0,1,
-    1,0,0,0,0,1,0,1,
-    1,0,0,0,0,1,0,1,
-    1,1,1,1,1,1,1,1,
+    1,0,0,0,0,0,0,1,
+    1,2,2,3,3,3,2,1,
 };
 
 void drawMap2D(){
     int x,y,xo,yo;
     for(y=0;y<mapY;y++){
         for(x=0;x<mapX;x++){
-            if(map[y*mapX+x] == 1) glColor3f(1,1,1); else glColor3f(0,0,0);
+            if(mapW[y*mapX+x] == 1) glColor3f(1,1,1); else glColor3f(0,0,0);
             xo=x*mapS; yo=y*mapS;
             glBegin(GL_QUADS);
             glVertex2i(xo     +1, yo     +1);
@@ -222,55 +222,80 @@ float dist(float ax, float ay, float bx, float by, float ang){
 
 void drawRays2D()
 {
- glColor3f(0,1,1); glBegin(GL_QUADS); glVertex2i(526,  0); glVertex2i(1006,  0); glVertex2i(1006,160); glVertex2i(526,160); glEnd();
- glColor3f(0,0,1); glBegin(GL_QUADS); glVertex2i(526,160); glVertex2i(1006,160); glVertex2i(1006,320); glVertex2i(526,320); glEnd();
+    glColor3f(0,1,1); glBegin(GL_QUADS); glVertex2i(526,  0); glVertex2i(1006,  0); glVertex2i(1006,160); glVertex2i(526,160); glEnd();
+    glColor3f(0,0,1); glBegin(GL_QUADS); glVertex2i(526,160); glVertex2i(1006,160); glVertex2i(1006,320); glVertex2i(526,320); glEnd();
 
- int r,mx,my,mp,dof,side; float vx,vy,rx,ry,ra,xo,yo,disV,disH;
+    int r,mx,my,mp,dof,side; float vx,vy,rx,ry,ra,xo,yo,disV,disH;
 
- ra=FixAng(pa+30);                                                              //ray set back 30 degrees
+    ra=FixAng(pa+30);                                                              //ray set back 30 degrees
 
- for(r=0;r<60;r++)
- {
-  //---Vertical---
-  dof=0; side=0; disV=100000;
-  float Tan=tan(degToRad(ra));
-       if(cos(degToRad(ra))> 0.001){ rx=(((int)px>>6)<<6)+64;      ry=(px-rx)*Tan+py; xo= 64; yo=-xo*Tan;}//lookinn left
-  else if(cos(degToRad(ra))<-0.001){ rx=(((int)px>>6)<<6) -0.0001; ry=(px-rx)*Tan+py; xo=-64; yo=-xo*Tan;}//lookinn right
-  else { rx=px; ry=py; dof=8;}                                                  //lookinn up or down. no hit
+    for(r=0;r<60;r++)
+    {
+    int vmt=0, hmt=0; //vertical and horizontal map texture number
+    //---Vertical---
+    dof=0; side=0; disV=100000;
+    float Tan=tan(degToRad(ra));
+        if(cos(degToRad(ra))> 0.001){ rx=(((int)px>>6)<<6)+64;      ry=(px-rx)*Tan+py; xo= 64; yo=-xo*Tan;}//lookinn left
+    else if(cos(degToRad(ra))<-0.001){ rx=(((int)px>>6)<<6) -0.0001; ry=(px-rx)*Tan+py; xo=-64; yo=-xo*Tan;}//lookinn right
+    else { rx=px; ry=py; dof=8;}                                                  //lookinn up or down. no hit
 
-  while(dof<8)
-  {
-   mx=(int)(rx)>>6; my=(int)(ry)>>6; mp=my*mapX+mx;
-   if(mp>0 && mp<mapX*mapY && map[mp]==1){ dof=8; disV=cos(degToRad(ra))*(rx-px)-sin(degToRad(ra))*(ry-py);}//hit
-   else{ rx+=xo; ry+=yo; dof+=1;}                                               //check next horizontal
-  }
-  vx=rx; vy=ry;
+    while(dof<8)
+    {
+        mx=(int)(rx)>>6; my=(int)(ry)>>6; mp=my*mapX+mx;
+        if(mp>0 && mp<mapX*mapY && mapW[mp]>=1){vmt=mapW[mp]-1; dof=8; disV=cos(degToRad(ra))*(rx-px)-sin(degToRad(ra))*(ry-py);}//hit
+        else{ rx+=xo; ry+=yo; dof+=1;}                                               //check next horizontal
+    }
+    vx=rx; vy=ry;
 
-  //---Horizontal---
-  dof=0; disH=100000;
-  Tan=1.0/Tan;
-       if(sin(degToRad(ra))> 0.001){ ry=(((int)py>>6)<<6) -0.0001; rx=(py-ry)*Tan+px; yo=-64; xo=-yo*Tan;}//lookinnn up
-  else if(sin(degToRad(ra))<-0.001){ ry=(((int)py>>6)<<6)+64;      rx=(py-ry)*Tan+px; yo= 64; xo=-yo*Tan;}//lookinnn down
-  else{ rx=px; ry=py; dof=8;}                                                   //lookinn straight left or right
+    //---Horizontal---
+    dof=0; disH=100000;
+    Tan=1.0/Tan;
+    if(sin(degToRad(ra))> 0.001){ ry=(((int)py>>6)<<6) -0.0001; rx=(py-ry)*Tan+px; yo=-64; xo=-yo*Tan;}//lookinnn up
+    else if(sin(degToRad(ra))<-0.001){ ry=(((int)py>>6)<<6)+64;      rx=(py-ry)*Tan+px; yo= 64; xo=-yo*Tan;}//lookinnn down
+    else{ rx=px; ry=py; dof=8;}                                                   //lookinn straight left or right
 
-  while(dof<8)
-  {
-   mx=(int)(rx)>>6; my=(int)(ry)>>6; mp=my*mapX+mx;
-   if(mp>0 && mp<mapX*mapY && map[mp]==1){ dof=8; disH=cos(degToRad(ra))*(rx-px)-sin(degToRad(ra))*(ry-py);}//hit
-   else{ rx+=xo; ry+=yo; dof+=1;}                                               //check next horizontal
-  }
+    while(dof<8)
+    {
+        mx=(int)(rx)>>6; my=(int)(ry)>>6; mp=my*mapX+mx;
+        if(mp>0 && mp<mapX*mapY && mapW[mp]>=1){hmt=mapW[mp]-1; dof=8; disH=cos(degToRad(ra))*(rx-px)-sin(degToRad(ra))*(ry-py);}//hit
+        else{ rx+=xo; ry+=yo; dof+=1;}                                               //check next horizontal
+    }
 
-  glColor3f(0,0.8,0);
-  if(disV<disH){ rx=vx; ry=vy; disH=disV; glColor3f(0,0.6,0);}                  //horizontal hit first
-  glLineWidth(2); glBegin(GL_LINES); glVertex2i(px,py); glVertex2i(rx,ry); glEnd();//draw 2D ray
+    float shade=1;
+    glColor3f(0,0.8,0);
+    if(disV<disH){hmt=vmt; shade=0.5; rx=vx; ry=vy; disH=disV; glColor3f(0,0.6,0);}                  //horizontal hit first
+    glLineWidth(2); glBegin(GL_LINES); glVertex2i(px,py); glVertex2i(rx,ry); glEnd();//draw 2D ray
 
-  int ca=FixAng(pa-ra); disH=disH*cos(degToRad(ca));                            //fix fisheye
-  int lineH = (mapS*320)/(disH); if(lineH>320){ lineH=320;}                     //line height and limit
-  int lineOff = 160 - (lineH>>1);                                               //line offset
+    int ca=FixAng(pa-ra); disH=disH*cos(degToRad(ca));                            //fix fisheye
+    int lineH = (mapS*320)/(disH);
+    float ty_step=32.0/(float)lineH;
+    float ty_off = 0;
+    if(lineH>320){ty_off =(lineH-320)/2.0; lineH=320;}                     //line height and limit
+    int lineOff = 160 - (lineH>>1);                                               //line offset
 
-  glLineWidth(8);glBegin(GL_LINES);glVertex2i(r*8+530,lineOff);glVertex2i(r*8+530,lineOff+lineH);glEnd();//draw vertical wall
+    ///drawing walls
+    int y;
+    float ty = ty_off * ty_step + hmt*32;
+    float tx;
+    if(shade == 1){
+        tx = (int)(rx/2.0)%32; if(ra>180){ tx=31-tx; }
+    }else {
+        tx = (int)(ry/2.0)%32; if(ra>90 && ra<270){ tx=31-tx; }
+    }
 
-  ra=FixAng(ra-1);                                                              //go to next ray
+    for(y=0;y<lineH;y++){
+        float c=All_Textures[(int)(ty)*32 + (int)(tx)]*shade;
+        if(hmt==0){ glColor3f(c     ,c/2.0  ,c/2.0  );}
+        if(hmt==1){ glColor3f(c     ,c      ,c/2.0  );}
+        if(hmt==2){ glColor3f(c/2.0 ,c/2.0  ,c      );}
+        if(hmt==3){ glColor3f(c/2.0 ,c      ,c/2.0  );}
+        glLineWidth(8);glBegin(GL_POINTS);glVertex2i(r*8+530,y+lineOff);glEnd();//draw vertical wall
+        ty+=ty_step;
+    }
+
+
+
+    ra=FixAng(ra-1);                                                              //go to next ray
  }
 }
 
@@ -289,12 +314,12 @@ void display(){
     int ipy=py/64.0, ipy_add_yo=(py+yo)/64.0, ipy_sub_yo=(py-yo)/64.0;
 
     if (Keys.w == 1) {
-            if(map[ipy*mapX         + ipx_add_xo]==0){ px += pdx*0.1*fps;}
-            if(map[ipy_add_yo*mapX  + ipx       ]==0){ py += pdy*0.1*fps; }
+            if(mapW[ipy*mapX         + ipx_add_xo]==0){ px += pdx*0.1*fps;}
+            if(mapW[ipy_add_yo*mapX  + ipx       ]==0){ py += pdy*0.1*fps; }
     }
     if (Keys.s == 1) {
-            if(map[ipy*mapX         + ipx_sub_xo]==0){ px -= pdx*0.1*fps;}
-            if(map[ipy_sub_yo*mapX  + ipx       ]==0){ py -= pdy*0.1*fps; }
+            if(mapW[ipy*mapX         + ipx_sub_xo]==0){ px -= pdx*0.1*fps;}
+            if(mapW[ipy_sub_yo*mapX  + ipx       ]==0){ py -= pdy*0.1*fps; }
     }
     glutPostRedisplay();
 
@@ -316,6 +341,13 @@ void ButtonDown(unsigned char key, int x, int y){
     if (key == 'd' || key == 'D') { Keys.d=1; }
     if (key == 'w' || key == 'W') { Keys.w=1; }
     if (key == 's' || key == 'S') { Keys.s=1; }
+    if( key == 'e' || key == 'E') { ///interaction
+        int xo=0; if(pdx<0){ xo=-25; } else {xo=25;}
+        int yo=0; if(pdy<0){ yo=-25; } else {yo=25;}
+        int ipx=px/64.0, ipx_add_xo=(px+xo)/64.0;
+        int ipy=py/64.0, ipy_add_yo=(py+yo)/64.0;
+        if(mapW[ipy_add_yo*mapX+ipx_add_xo]==4){mapW[ipy_add_yo*mapX+ipx_add_xo]=0;}
+    }
 }
 
 void ButtonUp(unsigned char key, int x, int y){
